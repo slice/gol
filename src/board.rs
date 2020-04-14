@@ -47,6 +47,7 @@ impl Board {
     }
 
     pub fn neighbors(&self, (x, y): Coords) -> [bool; 8] {
+        // TODO: actually handle this
         if x == 0 || y == 0 || x == self.width - 1 || y == self.height - 1 {
             return [false, false, false, false, false, false, false, false];
         }
