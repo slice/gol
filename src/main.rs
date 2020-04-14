@@ -1,5 +1,5 @@
-use std::ops::{Index, IndexMut};
 use minifb::{Key, Window, WindowOptions};
+use std::ops::{Index, IndexMut};
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 480;
@@ -36,25 +36,24 @@ impl Board {
         }
     }
 
-    pub fn neighbors(&self, (x, y): Coords) -> Vec<bool> {
+    pub fn neighbors(&self, (x, y): Coords) -> [bool; 8] {
         if x == 0 || y == 0 || x == self.width - 1 || y == self.height - 1 {
-            return vec![];
+            return [false, false, false, false, false, false, false, false];
         }
-
-        let above_y = (y + 1) * self.width;
-        let below_y = (y - 1) * self.width;
 
         [
             // above neighbors
-            &self.cells[(above_y + x - 1)..=(above_y + x + 1)],
-
+            self[(x - 1, y + 1)],
+            self[(x, y + 1)],
+            self[(x + 1, y + 1)],
             // side neighbors
-            std::slice::from_ref(&self[(x - 1, y)]),
-            std::slice::from_ref(&self[(x + 1, y)]),
-
+            self[(x - 1, y)],
+            self[(x + 1, y)],
             // below neighbors
-            &self.cells[(below_y + x - 1)..=(below_y + x + 1)],
-        ].concat()
+            self[(x - 1, y - 1)],
+            self[(x, y - 1)],
+            self[(x + 1, y - 1)],
+        ]
     }
 
     pub fn iter_cells(&self) -> impl Iterator<Item = (Coords, &bool)> {
@@ -76,7 +75,6 @@ impl Board {
             ((x, y), cell)
         })
     }
-
 }
 
 pub struct Life {
@@ -90,21 +88,22 @@ impl Life {
         }
     }
 
-    pub fn iterate(&mut self) -> Board {
-        let mut next_board = self.board.clone();
+    pub fn iterate(&mut self) {
+        let cloned_board = self.board.clone();
 
-        for (coords, cell) in self.board.iter_cells() {
-            let neighbors = self.board.neighbors(coords);
-            let alive_neighbors = neighbors.iter().filter(|&&n| n).count();
+        for (coords, cell) in self.board.iter_cells_mut() {
+            let n_alive = cloned_board
+                .neighbors(coords)
+                .iter()
+                .filter(|&&n| n)
+                .count();
 
-            match alive_neighbors {
-                2 | 3 if *cell => {},
-                3 if !*cell => next_board[coords] = true,
-                _ => next_board[coords] = false,
+            match n_alive {
+                2 | 3 if *cell => {}
+                3 if !*cell => *cell = true,
+                _ => *cell = false,
             }
         }
-
-        next_board
     }
 
     pub fn render(&self, pixbuf: &mut Vec<u32>) {
@@ -112,6 +111,21 @@ impl Life {
             pixbuf[i] = if *cell { u32::max_value() } else { 0 };
         }
     }
+}
+
+fn time<F, R>(label: &str, mut run: F, continuous: bool) -> R
+where
+    F: FnMut() -> R,
+{
+    let before = std::time::Instant::now();
+    let value = run();
+    print!("{}: {}ms    ", label, before.elapsed().as_millis());
+    if continuous {
+        print!("\r")
+    } else {
+        println!();
+    }
+    value
 }
 
 fn main() {
@@ -127,7 +141,7 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        life.board = life.iterate();
+        time("iterate", || life.iterate(), true);
         life.render(&mut pixbuf);
         window.update_with_buffer(&pixbuf, WIDTH, HEIGHT).unwrap();
     }
