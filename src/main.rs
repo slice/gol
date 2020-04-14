@@ -1,5 +1,7 @@
 use clap::{App, Arg, ArgMatches};
 use minifb::{Key, Window, WindowOptions};
+use rand::distributions::{Distribution, Standard};
+use rand::thread_rng;
 
 use gol::*;
 
@@ -61,9 +63,11 @@ fn main() {
     let height: usize = arg(&matches, "height");
 
     let mut life = Life::new(width, height);
-    for ((x, y), cell) in life.board.iter_cells_mut() {
-        *cell = ((x * y) as f64).sin() > 0.5;
-    }
+
+    let rng = thread_rng();
+    let cells: Vec<bool> = Standard.sample_iter(rng).take(width * height).collect();
+    life.board = Board::from_vec(width, height, cells);
+
     let mut pixbuf: Vec<u32> = vec![0; width * height];
 
     let mut window = Window::new("game of life", width, height, WindowOptions::default())

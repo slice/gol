@@ -32,6 +32,20 @@ impl Board {
         }
     }
 
+    pub fn from_vec(width: usize, height: usize, cells: Vec<bool>) -> Self {
+        assert_eq!(
+            cells.len(),
+            width * height,
+            "width * height isn't cells.len()"
+        );
+
+        Self {
+            width,
+            height,
+            cells,
+        }
+    }
+
     pub fn neighbors(&self, (x, y): Coords) -> [bool; 8] {
         if x == 0 || y == 0 || x == self.width - 1 || y == self.height - 1 {
             return [false, false, false, false, false, false, false, false];
